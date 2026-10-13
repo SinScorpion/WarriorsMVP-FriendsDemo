@@ -1,0 +1,12 @@
+{
+    "unity": "6000.3.23f1",
+    "builtUtc": "2026-10-13T07:21:22.4926018Z",
+    "result": "Succeeded",
+    "bytes": 66090952,
+    "errors": 0,
+    "warnings": 356,
+    "scenes": [
+        "Assets/Scenes/Home.unity",
+        "Assets/Scenes/SampleScene.unity"
+    ]
+}

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#151c29">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%231d2838' width='64' height='64' rx='12'/%3E%3Ctext x='32' y='46' text-anchor='middle' font-size='42' fill='%23efc371'%3EW%3C/text%3E%3C/svg%3E">
+  <title>Warriors — демоверсия для друзей</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#151c29;color:#f5efde;font:15px system-ui,sans-serif}
+    body{display:flex;flex-direction:column;align-items:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);overflow:hidden}
+    header{flex:none;width:100%;padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:16px;background:#1d2838}
+    header strong{font-size:16px}header span{color:#c3cad6;font-size:12px}button{font:inherit;cursor:pointer;border:0;border-radius:10px;background:#efc371;color:#201b13;padding:12px 20px;font-weight:700}
+    #fullscreen{padding:7px 10px;font-size:12px;background:#33445c;color:#f5efde}main{flex:1;min-height:0;width:100%;display:flex;justify-content:center;align-items:center;padding:8px}
+    #stage{position:relative;overflow:hidden;background:#101722;box-shadow:0 8px 36px #0005}canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}
+    #cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;background:radial-gradient(ellipse at top,#32465e,#111823 75%)}
+    #cover h1{font-size:30px;margin:0 0 10px}#cover p{line-height:1.6;color:#d4dbe6;max-width:300px}#status{font-size:13px;min-height:36px;white-space:pre-wrap;overflow-wrap:anywhere}progress{width:100%;max-width:260px;height:12px;accent-color:#efc371}
+    footer{flex:none;text-align:center;padding:0 12px 8px;font-size:11px;color:#aeb8c8}#stage:fullscreen{display:flex;justify-content:center;align-items:center;width:100%!important;height:100%!important;background:#151c29}
+    #stage:fullscreen canvas{width:auto;height:100%;max-width:100%;aspect-ratio:9/16}
+    @media(max-width:480px){header{padding:7px 10px;gap:8px}header span{display:none}main{padding:0}footer{padding:4px;font-size:10px}}
+  </style>
+</head>
+<body>
+  <header><strong>Warriors</strong><span>Демоверсия для друзей</span><button id="fullscreen" type="button" disabled>На весь экран</button></header>
+  <main><div id="stage"><canvas id="unity-canvas" width="540" height="960" tabindex="0" aria-label="Игра Warriors"></canvas>
+    <section id="cover"><h1>Warriors</h1><p>Собери отряд и отправляйся в бой.<br>Управление — мышью или касанием.</p>
+      <button id="start" type="button">Играть</button><p id="status" role="status" aria-live="polite">Первый запуск займёт немного времени.</p><progress id="progress" max="1" value="0" hidden></progress>
+    </section>
+  </div></main>
+  <footer>Ранняя версия · Прогресс сохраняется в этом браузере · Основная версия разрабатывается для Android</footer>
+  <script>
+    const stage=document.getElementById('stage'),canvas=document.getElementById('unity-canvas'),cover=document.getElementById('cover');
+    const start=document.getElementById('start'),status=document.getElementById('status'),progress=document.getElementById('progress'),fullscreen=document.getElementById('fullscreen');
+    let game=null;
+    function resize(){if(document.fullscreenElement)return;const area=document.querySelector('main');const mobile=innerWidth<=480,pad=mobile?0:16;const height=Math.floor(Math.min(area.clientHeight-pad,(area.clientWidth-pad)*16/9));stage.style.height=height+'px';stage.style.width=Math.floor(height*9/16)+'px';}
+    addEventListener('resize',resize);document.addEventListener('fullscreenchange',resize);resize();
+    function fail(message){status.textContent='Не удалось запустить игру. '+message;progress.hidden=true;start.hidden=false;start.disabled=false;start.textContent='Попробовать снова';}
+    start.addEventListener('click',()=>{
+      start.disabled=true;start.hidden=true;progress.hidden=false;status.textContent='Загрузка игры…';
+      const script=document.createElement('script');script.src='Build/FriendsWeb.loader.js';
+      script.onerror=()=>{script.remove();fail('Проверь подключение и обнови страницу.');};
+      script.onload=()=>createUnityInstance(canvas,{
+        dataUrl:'Build/FriendsWeb.data.unityweb',frameworkUrl:'Build/FriendsWeb.framework.js.unityweb',codeUrl:'Build/FriendsWeb.wasm.unityweb',
+        streamingAssetsUrl:'StreamingAssets',companyName: "DzoT Games",productName: "Stone Age Warriors",productVersion: "0.13",
+        matchWebGLToCanvasSize:true,devicePixelRatio:Math.min(devicePixelRatio||1,1.5),autoSyncPersistentDataPath:true,
+        showBanner:(message,type)=>{if(type==='error')fail(message);else console.warn(message);}
+      },value=>{progress.value=value;status.textContent='Загрузка игры: '+Math.round(value*100)+'%';})
+        .then(instance=>{game=instance;cover.hidden=true;cover.style.display='none';fullscreen.disabled=false;canvas.focus();})
+        .catch(error=>fail(String(error)));
+      document.body.appendChild(script);
+    });
+    fullscreen.addEventListener('click',()=>{if(stage.requestFullscreen)stage.requestFullscreen().catch(()=>{fullscreen.textContent='Недоступно';});else fullscreen.textContent='Недоступно';});
+    function save(){if(game)game.SendMessage('FriendsWebRuntime','FlushSave');}
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});addEventListener('pagehide',save);
+  </script>
+</body>
+</html>
